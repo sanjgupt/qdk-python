@@ -37,10 +37,10 @@ function Enable-Conda {
 
     if (Test-CondaEnabled) { return $true; }
 
-    if ("$Env:CONDA" -ne "") {
+    if (conda -ne "") {
         # Try and run the shell hook from the path nominated
         # by CONDA.
-        (& ("$Env:CONDA") shell.powershell hook) | Out-String | Invoke-Expression;
+        (& conda shell.powershell hook) | Out-String | Invoke-Expression;
     } else {
         (conda shell.powershell hook) | Out-String | Invoke-Expression;
     }
@@ -65,7 +65,7 @@ function Get-PythonConfiguration {
 
     # If the CONDA environment variable is set, allow that to override
     # the local PATH.
-    if ("$Env:CONDA" -ne "") {
+    if (conda -ne "") {
         $conda = Get-Command $Env:CONDA -ErrorAction SilentlyContinue;
     } else {
         $conda = Get-Command conda -ErrorAction SilentlyContinue;
