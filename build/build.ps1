@@ -1,13 +1,20 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-##
-# Build: Install given packages in given environments
-##
+<#
+    .SYNOPSIS
+        Build: Install given packages in given environments
+#>
+
+
 param (
   [string[]] $PackageDirs,
   [string[]] $EnvNames
 )
+
+& (Join-Path $PSScriptRoot "set-env.ps1");
+
+Import-Module (Join-Path $PSScriptRoot "conda-utils.psm1");
 
 if ($null -eq $PackageDirs) {
   $ParentPath = Split-Path -parent $PSScriptRoot
@@ -33,11 +40,11 @@ function Install-Package() {
   $ParentPath = Split-Path -parent $PSScriptRoot
   $AbsPackageDir = Join-Path $ParentPath $PackageDir
   Write-Host "##[info]Install package $AbsPackageDir in development mode for env $EnvName"
-  # Set environment vars to be able to run conda activate
-  (& conda "shell.powershell" "hook") | Out-String | Invoke-Expression
+  # Set environment vars to be able to run conda activate.
+  if (Enable-Conda) { Write-Host "##[info]Conda is enabled." }
   # Activate env
   conda activate $EnvName
-  which python
+  Write-Host "##[info]Python config: $(Get-PythonConfiguration | Out-String)"
   # Install package
   pip install -e $AbsPackageDir
 }

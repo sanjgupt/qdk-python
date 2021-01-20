@@ -1,14 +1,20 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-##
-# Pack: create wheels for given packages in given environments, output to directory
-##
+<#
+    .SYNOPSIS
+        Pack: create wheels for given packages in given environments, output to directory
+#>
+
 param (
   [string[]] $PackageDirs,
   [string[]] $EnvNames,
   [string] $OutDir
 )
+
+& (Join-Path $PSScriptRoot "set-env.ps1");
+
+Import-Module (Join-Path $PSScriptRoot "conda-utils.psm1");
 
 if ($null -eq $PackageDirs) {
   $parentPath = Split-Path -parent $PSScriptRoot
@@ -40,11 +46,11 @@ function Create-Wheel() {
 
   Push-Location $Path
     # Set environment vars to be able to run conda activate
-    (& conda "shell.powershell" "hook") | Out-String | Invoke-Expression
+    if (Enable-Conda) { Write-Host "##[info]Conda is enabled." }
     Write-Host "##[info]Pack wheel for env '$EnvName'"
     # Activate env
     conda activate $EnvName
-    which python
+    Write-Host "##[info]Python config: $(Get-PythonConfiguration | Out-String)"
     # Create package distribution
     python setup.py bdist_wheel sdist --formats=gztar
 
