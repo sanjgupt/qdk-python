@@ -41,10 +41,15 @@ function Enable-Conda {
     }
 
     if ($null -ne $Env:CONDA || "" -ne $Env:CONDA) {
+        if ($IsWindows) {
+            $CondaCmd = "$Env:CONDA/Scripts/conda"
+        } else {
+            $CondaCmd = "$Env:CONDA/bin/conda"
+        }
         # Try and run the shell hook from the path nominated
         # by CONDA.
         Write-Host "##[info]Enabling conda powershell hook using conda command: $Env:CONDA"
-        (& ($Env:CONDA) "shell.powershell" "hook") | Out-String | Invoke-Expression;
+        (& ($CondaCmd) "shell.powershell" "hook") | Out-String | Invoke-Expression;
         } else {
         Write-Host "##[info]Enabling conda powershell hook"
         (& conda "shell.powershell" "hook") | Out-String | Invoke-Expression;
@@ -70,8 +75,13 @@ function Get-PythonConfiguration {
 
     # If the CONDA environment variable is set, allow that to override
     # the local PATH.
-    if ($Env:CONDA -ne "") {
-        $conda = Get-Command $Env:CONDA -ErrorAction SilentlyContinue;
+    if ($null -ne $Env:CONDA || "" -ne $Env:CONDA) {
+        if ($IsWindows) {
+            $CondaCmd = "$Env:CONDA/Scripts/conda"
+        } else {
+            $CondaCmd = "$Env:CONDA/bin/conda"
+        }
+        $conda = Get-Command $CondaCmd -ErrorAction SilentlyContinue;
     } else {
         $conda = Get-Command conda -ErrorAction SilentlyContinue;
     }
