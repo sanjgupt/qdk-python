@@ -17,3 +17,4 @@ If ($Env:PYTHON_OUTDIR -eq $null) { $Env:PYTHON_OUTDIR =  (Join-Path $Env:DROPS_
 If (-not (Test-Path -Path $Env:PYTHON_OUTDIR)) { [IO.Directory]::CreateDirectory($Env:PYTHON_OUTDIR) }
 
 If ($Env:ENABLE_PYTHON -eq $null) { $Env:ENABLE_PYTHON =  "true" }
+If ($Env:ENABLE_INTEGRATION_TESTS -eq $null) { $Env:ENABLE_INTEGRATION_TESTS =  "true" }

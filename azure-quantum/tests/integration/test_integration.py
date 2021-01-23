@@ -33,7 +33,7 @@ def get_config() -> configparser.ConfigParser:
     :rtype: configparser.ConfigParser
     """
     config = configparser.ConfigParser()
-    path = os.path.abspath(os.path.join(os.path.split(__file__)[0], "..", ".."))
+    path = os.path.abspath(os.path.split(__file__)[0])
     config_path = os.path.join(path, "config.ini")
     assert os.path.exists(config_path), "Cannot run integration tests: no config file found in azure-quantum folder."
     config.read(config_path)

@@ -31,14 +31,14 @@ if ($EnvNames.length -ne $PackageDirs.length) {
   throw "Cannot run build script: '$EnvNames' and '$PackageDirs' lengths don't match"
 }
 
-function Invoke-Tests() {
+function Invoke-Unit-Tests() {
   param(
     [string] $PackageDir,
     [string] $EnvName
   )
   $ParentPath = Split-Path -parent $PSScriptRoot
   $AbsPackageDir = Join-Path $ParentPath $PackageDir
-  Write-Host "##[info]Test package $AbsPackageDir and run tests for env $EnvName"
+  Write-Host "##[info]Run unit tests for package $AbsPackageDir in env $EnvName"
   # Activate env
   Use-CondaEnv $EnvName
   # Install testing deps
@@ -48,10 +48,35 @@ function Invoke-Tests() {
   pytest $AbsPackageDir
 }
 
+function Invoke-Integration-Tests() {
+  param(
+    [string] $PackageDir,
+    [string] $EnvName
+  )
+  $ParentPath = Split-Path -parent $PSScriptRoot
+  $AbsPackageDir = Join-Path $ParentPath $PackageDir
+  $IntegrationTestsPath = Join-Path $AbsPackageDir "tests" "integration"
+  if (Test-Path -Path $IntegrationTestsPath) {
+    Write-Host "##[info]Run integration tests for package $AbsPackageDir in env $EnvName"
+    # Activate env
+    Use-CondaEnv $EnvName
+    # Run integration tests
+    $TestFiles = Get-ChildItem $IntegrationTestsPath -Filter *.py
+    ForEach ($file in $TestFiles) {
+      python $file.FullName
+    }
+  }
+}
+
 if ($Env:ENABLE_PYTHON -eq "false") {
   Write-Host "##vso[task.logissue type=warning;]Skipping testing Python packages. Env:ENABLE_PYTHON was set to 'false'."
 } else {
   for ($i=0; $i -le $PackageDirs.length-1; $i++) {
-    Invoke-Tests -PackageDir $PackageDirs[$i] -EnvName $EnvNames[$i]
+    Invoke-Unit-Tests -PackageDir $PackageDirs[$i] -EnvName $EnvNames[$i]
+    if ($Env:ENABLE_INTEGRATION_TESTS -eq "false") {
+      Write-Host "##vso[task.logissue type=warning;]Skipping integration tests. Env:ENABLE_INTEGRATION_TESTS was set to 'false'."
+    } else {
+      Invoke-Integration-Tests -PackageDir $PackageDirs[$i] -EnvName $EnvNames[$i]
+    }
   }
 }
