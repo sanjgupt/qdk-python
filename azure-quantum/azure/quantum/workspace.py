@@ -18,6 +18,7 @@ from typing import List, Optional
 from msrest.authentication import Authentication, BasicTokenAuthentication
 from azure.quantum._client import QuantumClient
 from azure.quantum._client.operations import JobsOperations, StorageOperations
+from azure.quantum._client.models import BlobDetails
 from azure.quantum import Job
 try:
     from .version import __version__
@@ -46,14 +47,14 @@ else:
         BASE_URL                = lambda location: BASE_URL_FROM_ENV or f"https://eastus2euap.quantum.azure.com/"
     else:
         logger.debug("Using production configuration.")
-        BASE_URL                = lambda location: BASE_URL_FROM_ENV or f"https://{location}.quantum.azure.com/"        
+        BASE_URL                = lambda location: BASE_URL_FROM_ENV or f"https://{location}.quantum.azure.com/"
     ARM_BASE_URL            = "https://management.azure.com/"
     AAD_CLIENT_ID           = "84ba0947-6c53-4dd2-9ca9-b3694761521b" # Microsoft Quantum Development Kit
     AAD_SCOPES              = [ "https://quantum.microsoft.com/Jobs.ReadWrite" ]
- 
+
 TOKEN_CACHE = os.environ['AZURE_QUANTUM_TOKEN_CACHE'] if 'AZURE_QUANTUM_TOKEN_CACHE' in os.environ else os.path.join(Path.home(), ".azure-quantum", "aad.bin")
 
-# Keeps track of the account name the current token is associated, so we only show 
+# Keeps track of the account name the current token is associated, so we only show
 # a log message about acquiring a new token if the account changes.
 _last_account = None
 
@@ -70,7 +71,8 @@ class TokenCacheWrapper:
 
         self.token_cache = msal.SerializableTokenCache()
         if os.path.exists(self.cache_path):
-            self.token_cache.deserialize(open(self.cache_path, "r").read())
+            with open(self.cache_path, "r") as cache:
+                self.token_cache.deserialize(cache.read())
 
     def write_out_cache(self):
         logger.debug(f"Updating AAD token cache at '{self.cache_path}'")
@@ -79,7 +81,8 @@ class TokenCacheWrapper:
         if not os.path.isdir(cache_folder):
             os.makedirs(cache_folder)
 
-        open(self.cache_path, "w").write(self.token_cache.serialize())
+        with open(self.cache_path, "w") as afile:
+            afile.write(self.token_cache.serialize())
 
 class MsalWrapper:
     def __init__(self, subscription_id: str, refresh: bool):
@@ -321,7 +324,8 @@ class Workspace:
         Calls the service and returns a container sas url
         """
         client = self._create_workspace_storage_client()
-        container_uri = client.sas_uri(container_name, blob_name)
+        blob_details = BlobDetails(container_name=container_name, blob_name=blob_name)
+        container_uri = client.sas_uri(blob_details=blob_details)
 
         logger.debug(f"Container URI from service: {container_uri}")
         return container_uri.sas_uri
@@ -369,10 +373,9 @@ class Workspace:
         :returns:
             the user credentials to authenticate with Azure Quantum
         """
-        if refresh or (self.credentials is None):
-            self.credentials = None
-            msal_wrapper = MsalWrapper(self.subscription_id, refresh=refresh)
-            auth_token = msal_wrapper.acquire_auth_token()
-            return BasicTokenAuthentication(auth_token)
 
-        return self.credentials
+        if refresh or (self.credentials is None):
+            msal_wrapper = MsalWrapper(self.subscription_id, refresh=refresh)
+            self.credentials = msal_wrapper.acquire_auth_token()
+
+        return BasicTokenAuthentication(self.credentials)
