@@ -45,7 +45,8 @@ class Solver:
         self.force_str_params = force_str_params
         self.params = { "params": {} } if nested_params else {}
 
-    def submit(self, problem: Union[str, Problem], compress: bool = True) -> Job:
+
+    def submit(self, problem: Union[str, Problem], compress: bool = True,  tags: Optional[List[str]] = None) -> Job:
         """Submits a job to execution to the associated Azure Quantum Workspace.
 
         :param problem:
@@ -81,7 +82,7 @@ class Solver:
             name = problem.name
             problem_uri = problem.upload(self.workspace, compress=compress, container_name=container_name, blob_name="inputData")
         
-        logger.info(f"Submitting problem '{name}'. Using payload from: '{problem_uri}'")
+        logger.info(f"Submitting problem '{name}' with tags: '{tags}'. Using payload from: '{problem_uri}'")
 
         details = JobDetails(
             id=job_id,
@@ -96,18 +97,25 @@ class Solver:
         )
 
         logger.debug(f"==> submitting: {details}")
-        job = self.workspace.submit_job(Job(self.workspace, details))
+        job = Job(self.workspace, details)
+
+        if tags:
+            job.update_tags(tags)
+
+        job = self.workspace.submit_job(job)
         return job
 
-    def optimize(self, problem: Union[str, Problem]):
+    def optimize(self, problem: Union[str, Problem], tags: Optional[List[str]] = None):
         """Submits the Problem to the associated Azure Quantum Workspace and get the results. 
         
         :param problem: 
             The Problem to solve. It can be an instance of a Problem, 
             or the URL of an Azure Storage Blob where the serialized version
             of a Problem has been uploaded.
+        :param tags:
+            Optional list of string tags for the problem submission
         """
-        job = self.submit(problem)
+        job = self.submit(problem, tags)
         logger.info(f"Submitted job: '{job.id}'")
         
         return job.get_results()
