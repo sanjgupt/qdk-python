@@ -56,6 +56,12 @@ class Problem:
         self.uploaded_blob_uri = None
         self.uploaded_blob_params = None
 
+    """
+    Constant thresholds used to determine if a problem is "large".
+    """
+    NUM_VARIABLES_LARGE = 2500
+    NUM_TERMS_LARGE = 10e6
+
     def serialize(self) -> str:
         """Serializes the problem to a JSON string"""
         result = {
@@ -212,3 +218,16 @@ class Problem:
                 total_cost += term.evaluate(configuration_transformed)
 
         return total_cost
+
+    def is_large(self) -> bool:
+        """Determines if the current problem is large. 
+        "large" is an arbitrary threshold and can be easily changed. Based on usage data, we have defined a 
+        large problem to be 2500+ variables AND 1mil+ terms. 
+        """
+
+        set_vars = set()
+        num_terms = len(self.terms)
+        for term in self.terms:
+            set_vars.update(term.ids)
+        
+        return (len(set_vars) >= NUM_VARIABLES_LARGE and len(self.terms) >= NUM_TERMS_LARGE)
